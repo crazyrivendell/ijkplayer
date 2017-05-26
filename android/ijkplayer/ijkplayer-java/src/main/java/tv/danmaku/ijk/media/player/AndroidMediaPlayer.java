@@ -227,6 +227,11 @@ public class AndroidMediaPlayer extends AbstractMediaPlayer {
     }
 
     @Override
+    public void offsetTo(int offset) throws IllegalStateException {
+
+    }
+
+    @Override
     public long getCurrentPosition() {
         try {
             return mInternalMediaPlayer.getCurrentPosition();
@@ -333,6 +338,7 @@ public class AndroidMediaPlayer extends AbstractMediaPlayer {
     /*--------------------
      * Listeners adapter
      */
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     private void attachInternalListeners() {
         mInternalMediaPlayer.setOnPreparedListener(mInternalListenerAdapter);
         mInternalMediaPlayer
@@ -347,6 +353,7 @@ public class AndroidMediaPlayer extends AbstractMediaPlayer {
         mInternalMediaPlayer.setOnTimedTextListener(mInternalListenerAdapter);
     }
 
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     private class AndroidMediaPlayerListenerHolder implements
             MediaPlayer.OnPreparedListener, MediaPlayer.OnCompletionListener,
             MediaPlayer.OnBufferingUpdateListener,

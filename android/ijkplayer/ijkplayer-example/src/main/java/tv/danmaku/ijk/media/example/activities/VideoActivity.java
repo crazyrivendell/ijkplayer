@@ -34,7 +34,9 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TableLayout;
 import android.widget.TextView;
 
@@ -60,6 +62,7 @@ public class VideoActivity extends AppCompatActivity implements TracksFragment.I
     private TableLayout mHudView;
     private DrawerLayout mDrawerLayout;
     private ViewGroup mRightDrawer;
+    private Button mTestButton = null;
 
     private Settings mSettings;
     private boolean mBackPressed;
@@ -79,7 +82,15 @@ public class VideoActivity extends AppCompatActivity implements TracksFragment.I
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_player);
-
+        mTestButton = (Button)findViewById(R.id.test_btn);
+        mTestButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, " Test button clicked");
+                mVideoView.setOffset(2);
+//                setOffset
+            }
+        });
         mSettings = new Settings(this);
 
         // handle arguments

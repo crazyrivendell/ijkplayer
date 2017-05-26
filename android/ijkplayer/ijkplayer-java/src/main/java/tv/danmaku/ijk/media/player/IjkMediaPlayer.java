@@ -669,6 +669,9 @@ public final class IjkMediaPlayer extends AbstractMediaPlayer {
     public native void seekTo(long msec) throws IllegalStateException;
 
     @Override
+    public native void offsetTo(int offset) throws IllegalStateException;
+
+    @Override
     public native long getCurrentPosition();
 
     @Override

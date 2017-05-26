@@ -133,6 +133,11 @@ public class MediaPlayerProxy implements IMediaPlayer {
     }
 
     @Override
+    public void offsetTo(int offset) throws IllegalStateException {
+
+    }
+
+    @Override
     public long getCurrentPosition() {
         return mBackEndMediaPlayer.getCurrentPosition();
     }

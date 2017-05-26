@@ -46,9 +46,11 @@
 
 #define FFP_MSG_VIDEO_DECODER_OPEN          10001
 
-#define FFP_REQ_START                       20001
-#define FFP_REQ_PAUSE                       20002
+#define FFP_REQ_START                      20001
+#define FFP_REQ_PAUSE                     20002
 #define FFP_REQ_SEEK                        20003
+#define FFP_REQ_OFFSET                   20004
+
 
 #define FFP_PROP_FLOAT_VIDEO_DECODE_FRAMES_PER_SECOND   10001
 #define FFP_PROP_FLOAT_VIDEO_OUTPUT_FRAMES_PER_SECOND   10002

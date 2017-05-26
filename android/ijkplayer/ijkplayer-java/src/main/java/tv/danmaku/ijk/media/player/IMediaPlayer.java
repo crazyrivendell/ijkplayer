@@ -96,6 +96,8 @@ public interface IMediaPlayer {
 
     void seekTo(long msec) throws IllegalStateException;
 
+    void offsetTo(int offset) throws IllegalStateException;
+
     long getCurrentPosition();
 
     long getDuration();

@@ -173,7 +173,8 @@ public class TracksFragment extends Fragment {
             return view;
         }
 
-        final class ViewHolder {
+
+         class ViewHolder {
             public TextView mNameTextView;
         }
     }

@@ -760,6 +760,7 @@ static void stream_component_close(FFPlayer *ffp, int stream_index)
     }
 
     ic->streams[stream_index]->discard = AVDISCARD_ALL;
+    av_log(NULL, AV_LOG_DEBUG, "[wml] stream_component_close stream[%d] discard[%d]-\n",stream_index, ic->streams[stream_index]->discard);
     switch (codecpar->codec_type) {
     case AVMEDIA_TYPE_AUDIO:
         is->audio_st = NULL;
@@ -954,6 +955,25 @@ static void stream_seek(VideoState *is, int64_t pos, int64_t rel, int seek_by_by
         SDL_CondSignal(is->continue_read_thread);
     }
 }
+
+/* offset in the playlist
+    offset--fov to change
+    rel--current fov
+*/
+static void stream_offset(VideoState *is, int64_t offset, int64_t rel)
+{
+    if (!is->offset_req) {
+        is->offset_pos = offset;
+        is->offset_rel = rel;
+        /*is->seek_flags &= ~AVSEEK_FLAG_BYTE;
+        if (seek_by_bytes)
+            is->seek_flags |= AVSEEK_FLAG_BYTE;*/
+        is->offset_req = 1;
+        SDL_CondSignal(is->continue_read_thread);
+    }
+    return 0;
+}
+
 
 /* pause or resume the video */
 static void stream_toggle_pause_l(FFPlayer *ffp, int pause_on)
@@ -2498,6 +2518,7 @@ static int stream_component_open(FFPlayer *ffp, int stream_index)
 
     is->eof = 0;
     ic->streams[stream_index]->discard = AVDISCARD_DEFAULT;
+    av_log(NULL, AV_LOG_DEBUG, "[wml] stream_component_open stream[%d] discard[%d]-\n",stream_index, ic->streams[stream_index]->discard);
     switch (avctx->codec_type) {
     case AVMEDIA_TYPE_AUDIO:
 #if CONFIG_AVFILTER
@@ -2674,6 +2695,7 @@ static int read_thread(void *arg)
     int64_t prev_io_tick_counter = 0;
     int64_t io_tick_counter = 0;
 
+    av_log(NULL, AV_LOG_DEBUG, "[wml] read_thread in.\n");
     if (!wait_mutex) {
         av_log(NULL, AV_LOG_FATAL, "SDL_CreateMutex(): %s\n", SDL_GetError());
         ret = AVERROR(ENOMEM);
@@ -2692,6 +2714,7 @@ static int read_thread(void *arg)
         ret = AVERROR(ENOMEM);
         goto fail;
     }
+    av_log(NULL, AV_LOG_DEBUG, "[wml] read_thread avformat_alloc_context.\n");
     ic->interrupt_callback.callback = decode_interrupt_cb;
     ic->interrupt_callback.opaque = is;
     if (!av_dict_get(ffp->format_opts, "scan_all_pmts", NULL, AV_DICT_MATCH_CASE)) {
@@ -2706,12 +2729,14 @@ static int read_thread(void *arg)
     }
     if (ffp->iformat_name)
         is->iformat = av_find_input_format(ffp->iformat_name);
+    av_log(NULL, AV_LOG_DEBUG, "[wml] read_thread----filename=%s,iformat_name=%s .\n",is->filename, ffp->iformat_name);
     err = avformat_open_input(&ic, is->filename, is->iformat, &ffp->format_opts);
     if (err < 0) {
         print_error(is->filename, err);
         ret = -1;
         goto fail;
     }
+    av_log(NULL, AV_LOG_DEBUG, "[wml] read_thread avformat_open_input.\n");
     if (scan_all_pmts_set)
         av_dict_set(&ffp->format_opts, "scan_all_pmts", NULL, AV_DICT_MATCH_CASE);
 
@@ -2787,6 +2812,7 @@ static int read_thread(void *arg)
         AVStream *st = ic->streams[i];
         enum AVMediaType type = st->codecpar->codec_type;
         st->discard = AVDISCARD_ALL;
+        av_log(ffp, AV_LOG_DEBUG, "[wml] read_thread stream[%d], discard: %d\n", i, st->discard);
         if (type >= 0 && ffp->wanted_stream_spec[type] && st_index[type] == -1)
             if (avformat_match_stream_specifier(ic, st, ffp->wanted_stream_spec[type]) > 0)
                 st_index[type] = i;
@@ -2903,7 +2929,11 @@ static int read_thread(void *arg)
     if (ffp->seek_at_start > 0) {
         ffp_seek_to_l(ffp, (long)(ffp->seek_at_start));
     }
-
+    /* fov should be selected*/
+    if (ffp->offset_at_start > 0) {
+        ffp_offset_to_l(ffp, (int)(ffp->offset_at_start));
+    }
+    av_log(NULL, AV_LOG_DEBUG, "[wml] read_thread start play.\n");
     for (;;) {
         if (is->abort_request)
             break;
@@ -2998,6 +3028,15 @@ static int read_thread(void *arg)
 
             ffp_notify_msg3(ffp, FFP_MSG_SEEK_COMPLETE, (int)fftime_to_milliseconds(seek_target), ret);
             ffp_toggle_buffering(ffp, 1);
+        }
+        /* offset change*/
+        if(is->offset_req)
+        {   
+            //:TODO offset change wml
+            is->offset_req = 0;
+            int offset_pos = is->offset_pos;
+            int offset_rel = is->offset_rel;
+            av_log(NULL, AV_LOG_DEBUG, "[wml] offset_req offset_pos[%d], offset_rel[%d] \n",is->offset_pos, is->offset_rel);
         }
         if (is->queue_attachments_req) {
             if (is->video_st && (is->video_st->disposition & AV_DISPOSITION_ATTACHED_PIC)) {
@@ -3176,6 +3215,7 @@ static int read_thread(void *arg)
         ffp_notify_msg2(ffp, FFP_MSG_ERROR, last_error);
     }
     SDL_DestroyMutex(wait_mutex);
+    av_log(NULL, AV_LOG_DEBUG, "[wml] read_thread out.\n");
     return 0;
 }
 
@@ -3800,7 +3840,7 @@ int ffp_prepare_async_l(FFPlayer *ffp, const char *file_name)
     return 0;
 }
 
-int ffp_start_from_l(FFPlayer *ffp, long msec)
+int ffp_start_from_l(FFPlayer *ffp, long msec,int offset)
 {
     assert(ffp);
     VideoState *is = ffp->is;
@@ -3810,6 +3850,7 @@ int ffp_start_from_l(FFPlayer *ffp, long msec)
     ffp->auto_resume = 1;
     ffp_toggle_buffering(ffp, 1);
     ffp_seek_to_l(ffp, msec);
+    ffp_offset_to_l(ffp,offset);
     return 0;
 }
 
@@ -3898,6 +3939,20 @@ int ffp_seek_to_l(FFPlayer *ffp, long msec)
     stream_seek(is, seek_pos, 0, 0);
     return 0;
 }
+
+int ffp_offset_to_l(FFPlayer *ffp, int offset)
+{
+    assert(ffp);
+    VideoState *is = ffp->is;
+    if (!is)
+        return EIJK_NULL_IS_PTR;
+
+    int start_offset = is->ic->offset;
+    av_log(ffp, AV_LOG_DEBUG, "stream_offset %d to %d. \n", start_offset, (int)offset);
+    stream_offset(is, offset, 0);
+    return 0;
+}
+
 
 long ffp_get_current_position_l(FFPlayer *ffp)
 {

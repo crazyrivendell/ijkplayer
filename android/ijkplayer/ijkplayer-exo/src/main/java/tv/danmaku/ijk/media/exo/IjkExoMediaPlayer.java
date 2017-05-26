@@ -193,6 +193,11 @@ public class IjkExoMediaPlayer extends AbstractMediaPlayer {
     }
 
     @Override
+    public void offsetTo(int offset) throws IllegalStateException {
+
+    }
+
+    @Override
     public long getCurrentPosition() {
         if (mInternalPlayer == null)
             return 0;

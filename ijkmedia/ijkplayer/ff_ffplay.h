@@ -56,7 +56,7 @@ int       ffp_get_audio_codec_info(FFPlayer *ffp, char **codec_info);
 
 /* playback controll */
 int       ffp_prepare_async_l(FFPlayer *ffp, const char *file_name);
-int       ffp_start_from_l(FFPlayer *ffp, long msec);
+int       ffp_start_from_l(FFPlayer *ffp, long msec, int offset);
 int       ffp_start_l(FFPlayer *ffp);
 int       ffp_pause_l(FFPlayer *ffp);
 int       ffp_is_paused_l(FFPlayer *ffp);
@@ -70,6 +70,9 @@ long      ffp_get_duration_l(FFPlayer *ffp);
 long      ffp_get_playable_duration_l(FFPlayer *ffp);
 void      ffp_set_loop(FFPlayer *ffp, int loop);
 int       ffp_get_loop(FFPlayer *ffp);
+
+/* offset fov*/
+int       ffp_offset_to_l(FFPlayer *ffp, int offset);
 
 /* for internal usage */
 int       ffp_packet_queue_init(PacketQueue *q);

@@ -319,6 +319,20 @@ LABEL_RETURN:
     ijkmp_dec_ref_p(&mp);
 }
 
+static void
+IjkMediaPlayer_offsetTo(JNIEnv *env, jobject thiz, jint offset)
+{
+    MPTRACE("%s\n", __func__);
+    IjkMediaPlayer *mp = jni_get_media_player(env, thiz);
+    JNI_CHECK_GOTO(mp, env, "java/lang/IllegalStateException", "mpjni: offsetTo: null mp", LABEL_RETURN);
+
+    ijkmp_offset_to(mp, offset);
+
+LABEL_RETURN:
+    ijkmp_dec_ref_p(&mp);
+}
+
+
 static jboolean
 IjkMediaPlayer_isPlaying(JNIEnv *env, jobject thiz)
 {
@@ -1082,6 +1096,7 @@ static JNINativeMethod g_methods[] = {
     { "_start",                 "()V",      (void *) IjkMediaPlayer_start },
     { "_stop",                  "()V",      (void *) IjkMediaPlayer_stop },
     { "seekTo",                 "(J)V",     (void *) IjkMediaPlayer_seekTo },
+    { "offsetTo",               "(I)V",     (void *) IjkMediaPlayer_offsetTo },
     { "_pause",                 "()V",      (void *) IjkMediaPlayer_pause },
     { "isPlaying",              "()Z",      (void *) IjkMediaPlayer_isPlaying },
     { "getCurrentPosition",     "()J",      (void *) IjkMediaPlayer_getCurrentPosition },

@@ -591,6 +591,47 @@ int ijkmp_seek_to(IjkMediaPlayer *mp, long msec)
     return retval;
 }
 
+static int ikjmp_chkst_offset_l(int mp_state)
+{
+    MPST_RET_IF_EQ(mp_state, MP_STATE_IDLE);
+    MPST_RET_IF_EQ(mp_state, MP_STATE_INITIALIZED);
+    MPST_RET_IF_EQ(mp_state, MP_STATE_ASYNC_PREPARING);
+    MPST_RET_IF_EQ(mp_state, MP_STATE_STOPPED);
+    MPST_RET_IF_EQ(mp_state, MP_STATE_ERROR);
+    MPST_RET_IF_EQ(mp_state, MP_STATE_END);
+
+    return 0;
+}
+
+
+int ijkmp_offset_to_l(IjkMediaPlayer *mp, int offset)
+{
+    assert(mp);
+
+    MP_RET_IF_FAILED(ikjmp_chkst_offset_l(mp->mp_state));
+
+    mp->offset_req= 1;
+    mp->offset_selected= offset;
+    ffp_remove_msg(mp->ffplayer, FFP_REQ_OFFSET);
+    ffp_notify_msg2(mp->ffplayer, FFP_REQ_OFFSET, (int)offset);
+
+    return 0;
+}
+
+
+int ijkmp_offset_to(IjkMediaPlayer *mp, int offset)
+{
+    assert(mp);
+    MPTRACE("ijkmp_offset_to(%ld)\n", offset);
+    pthread_mutex_lock(&mp->mutex);
+    int retval = ijkmp_offset_to_l(mp, offset);
+    pthread_mutex_unlock(&mp->mutex);
+    MPTRACE("ijkmp_offset_to(%ld)=%d\n", offset, retval);
+
+    return retval;
+}
+
+
 int ijkmp_get_state(IjkMediaPlayer *mp)
 {
     return mp->mp_state;
@@ -729,7 +770,7 @@ int ijkmp_get_msg(IjkMediaPlayer *mp, AVMessage *msg, int block)
                 if (mp->restart) {
                     if (mp->restart_from_beginning) {
                         av_log(mp->ffplayer, AV_LOG_DEBUG, "ijkmp_get_msg: FFP_REQ_START: restart from beginning\n");
-                        retval = ffp_start_from_l(mp->ffplayer, 0);
+                        retval = ffp_start_from_l(mp->ffplayer, 0, 0);
                         if (retval == 0)
                             ijkmp_change_state_l(mp, MP_STATE_STARTED);
                     } else {
@@ -771,6 +812,20 @@ int ijkmp_get_msg(IjkMediaPlayer *mp, AVMessage *msg, int block)
                 mp->restart_from_beginning = 0;
                 if (0 == ffp_seek_to_l(mp->ffplayer, msg->arg1)) {
                     av_log(mp->ffplayer, AV_LOG_DEBUG, "ijkmp_get_msg: FFP_REQ_SEEK: seek to %d\n", (int)msg->arg1);
+                }
+            }
+            pthread_mutex_unlock(&mp->mutex);
+            break;
+
+        case FFP_REQ_OFFSET:
+            MPTRACE("ijkmp_get_msg: FFP_REQ_OFFSET\n");
+            continue_wait_next_msg = 1;
+
+            pthread_mutex_lock(&mp->mutex);
+            if (0 == ikjmp_chkst_seek_l(mp->mp_state)) {
+                mp->restart_from_beginning = 0;
+                if (0 == ffp_offset_to_l(mp->ffplayer, msg->arg1)) {
+                    av_log(mp->ffplayer, AV_LOG_DEBUG, "ijkmp_get_msg: FFP_REQ_OFFSET: offset to %d\n", (int)msg->arg1);
                 }
             }
             pthread_mutex_unlock(&mp->mutex);

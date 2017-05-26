@@ -266,6 +266,12 @@ typedef struct VideoState {
     int seek_flags;
     int64_t seek_pos;
     int64_t seek_rel;
+
+    /*offset */
+    int offset_req;
+    int offset_flags;
+    int64_t offset_pos;
+    int64_t offset_rel;
 #ifdef FFP_MERGE
     int read_pause_return;
 #endif
@@ -572,6 +578,7 @@ typedef struct FFPlayer {
     int loop;
     int framedrop;
     int64_t seek_at_start;
+    int offset_at_start;
     int subtitle;
     int infinite_buffer;
     enum ShowMode show_mode;
@@ -716,6 +723,7 @@ inline static void ffp_reset_internal(FFPlayer *ffp)
     ffp->loop                   = 1;
     ffp->framedrop              = 0; // option
     ffp->seek_at_start          = 0;
+    ffp->offset_at_start = 0;
     ffp->infinite_buffer        = -1;
     ffp->show_mode              = SHOW_MODE_NONE;
     av_freep(&ffp->audio_codec_name);

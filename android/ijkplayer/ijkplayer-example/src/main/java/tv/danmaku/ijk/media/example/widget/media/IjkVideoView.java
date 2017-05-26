@@ -247,6 +247,13 @@ public class IjkVideoView extends FrameLayout implements MediaController.MediaPl
         mHudViewHolder = new InfoHudViewHolder(getContext(), tableLayout);
     }
 
+    public void setOffset(int offset) {
+        try {
+            mMediaPlayer.offsetTo(offset);
+        } catch (IllegalStateException e) {
+            e.printStackTrace();
+        }
+    }
     /**
      * Sets video path.
      *
