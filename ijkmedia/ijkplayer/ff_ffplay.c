@@ -957,21 +957,15 @@ static void stream_seek(VideoState *is, int64_t pos, int64_t rel, int seek_by_by
 }
 
 /* offset in the playlist
-    offset--fov to change
-    rel--current fov
+  * offset--fov to change
 */
-static void stream_offset(VideoState *is, int64_t offset, int64_t rel)
+static void stream_offset(VideoState *is, int offset)
 {
     if (!is->offset_req) {
         is->offset_pos = offset;
-        is->offset_rel = rel;
-        /*is->seek_flags &= ~AVSEEK_FLAG_BYTE;
-        if (seek_by_bytes)
-            is->seek_flags |= AVSEEK_FLAG_BYTE;*/
         is->offset_req = 1;
         SDL_CondSignal(is->continue_read_thread);
     }
-    return 0;
 }
 
 
@@ -2960,12 +2954,16 @@ static int read_thread(void *arg)
          /* offset change*/
         if(is->offset_req)
         {
-            //:TODO offset change wml
-            int offset_pos = is->offset_pos;
-            int offset_rel = is->offset_rel;
-            av_log(NULL, AV_LOG_DEBUG, "[wml] offset_req offset_pos=%d, new offset=%d, old offset=%d.\n",is->offset_pos, is->offset_rel, ic->offset);
-            ic->offset = is->offset_pos;
-
+            //offset(fov) check&change  --add by wml
+            av_log(NULL, AV_LOG_DEBUG, "[wml] offset_req new offset=%d, old offset=%d.\n",is->offset_pos, ic->offset);
+            
+            if(ic->offset == is->offset_pos){
+                av_log(NULL,AV_LOG_INFO,"offset not needed because of same fov.\n");
+            }
+            else{
+                ic->offset_req = is->offset_req;
+                ic->offset = is->offset_pos;
+            }
             is->offset_req = 0;
         }
         if (is->seek_req) {
@@ -3958,7 +3956,7 @@ int ffp_offset_to_l(FFPlayer *ffp, int offset)
 
     int start_offset = is->ic->offset;
     av_log(ffp, AV_LOG_DEBUG, "stream_offset %d to %d. \n", start_offset, (int)offset);
-    stream_offset(is, offset, 0);
+    stream_offset(is, offset);
     return 0;
 }
 

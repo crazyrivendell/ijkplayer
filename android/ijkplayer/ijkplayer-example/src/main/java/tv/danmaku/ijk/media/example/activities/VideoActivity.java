@@ -66,6 +66,7 @@ public class VideoActivity extends AppCompatActivity implements TracksFragment.I
 
     private Settings mSettings;
     private boolean mBackPressed;
+    private int mOffset = 0;
 
     public static Intent newIntent(Context context, String videoPath, String videoTitle) {
         Intent intent = new Intent(context, VideoActivity.class);
@@ -87,8 +88,8 @@ public class VideoActivity extends AppCompatActivity implements TracksFragment.I
             @Override
             public void onClick(View v) {
                 Log.d(TAG, " Test button clicked");
-                mVideoView.setOffset(2);
-//                setOffset
+                mVideoView.setOffset(mOffset);
+                mOffset ++;
             }
         });
         mSettings = new Settings(this);

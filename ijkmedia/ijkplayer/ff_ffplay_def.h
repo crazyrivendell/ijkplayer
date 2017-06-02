@@ -151,6 +151,9 @@ typedef struct PacketQueue {
     int64_t duration;
     int abort_request;
     int serial;
+
+    int offset; /*[wml] identify which fov is belong to*/
+    
     SDL_mutex *mutex;
     SDL_cond *cond;
     MyAVPacketList *recycle_pkt;
@@ -194,6 +197,9 @@ typedef struct Frame {
     AVFrame *frame;
     AVSubtitle sub;
     int serial;
+    
+    int offset; /*[wml] identify which fov is belong to*/
+    
     double pts;           /* presentation timestamp for the frame */
     double duration;      /* estimated duration of the frame */
     int64_t pos;          /* byte position of the frame in the input file */
@@ -267,11 +273,10 @@ typedef struct VideoState {
     int64_t seek_pos;
     int64_t seek_rel;
 
-    /*offset */
-    int offset_req;
-    int offset_flags;
-    int64_t offset_pos;
-    int64_t offset_rel;
+    /*offset  [wml]*/
+    int offset_req;   /*offset requset*/
+    int offset_pos; /* offset fov*/
+
 #ifdef FFP_MERGE
     int read_pause_return;
 #endif

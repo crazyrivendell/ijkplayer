@@ -622,11 +622,11 @@ int ijkmp_offset_to_l(IjkMediaPlayer *mp, int offset)
 int ijkmp_offset_to(IjkMediaPlayer *mp, int offset)
 {
     assert(mp);
-    MPTRACE("ijkmp_offset_to(%ld)\n", offset);
+    MPTRACE("ijkmp_offset_to(%d)\n", offset);
     pthread_mutex_lock(&mp->mutex);
     int retval = ijkmp_offset_to_l(mp, offset);
     pthread_mutex_unlock(&mp->mutex);
-    MPTRACE("ijkmp_offset_to(%ld)=%d\n", offset, retval);
+    MPTRACE("ijkmp_offset_to(%d)=%d\n", offset, retval);
 
     return retval;
 }
