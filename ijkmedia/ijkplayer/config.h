@@ -31,6 +31,13 @@
 #endif
 #define CONFIG_AVFILTER 0
 
+// support dynamic_streaming hls or rtmp
+#ifdef DYNAMIC_STREAM
+#undef DYNAMIC_STREAM
+#endif
+#define DYNAMIC_STREAM 1
+
+
 #ifdef FFP_MERGE
 #undef FFP_MERGE
 #endif

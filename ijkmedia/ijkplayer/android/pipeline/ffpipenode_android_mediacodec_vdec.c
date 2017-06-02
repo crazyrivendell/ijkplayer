@@ -1112,7 +1112,7 @@ IJKFF_Pipenode *ffpipenode_create_video_decoder_from_android_mediacodec(FFPlayer
     jobject                jsurface = NULL;
 
     node->func_destroy  = func_destroy;
-    node->func_run_sync = func_run_sync;
+    node->func_run_sync = func_run_sync; /*[wml] hard decode*/
     node->func_flush    = func_flush;
     opaque->pipeline    = pipeline;
     opaque->ffp         = ffp;

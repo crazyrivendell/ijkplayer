@@ -1883,7 +1883,7 @@ static int ffplay_video_thread(void *arg)
     int ret;
     AVRational tb = is->video_st->time_base;
     AVRational frame_rate = av_guess_frame_rate(is->ic, is->video_st, NULL);
-
+    av_log(NULL,AV_LOG_DEBUG,"[wml] ffplay_video_thread in.\n");
 #if CONFIG_AVFILTER
     AVFilterGraph *graph = avfilter_graph_alloc();
     AVFilterContext *filt_out = NULL, *filt_in = NULL;
@@ -1896,7 +1896,6 @@ static int ffplay_video_thread(void *arg)
         av_frame_free(&frame);
         return AVERROR(ENOMEM);
     }
-
 #else
     ffp_notify_msg2(ffp, FFP_MSG_VIDEO_ROTATION_CHANGED, ffp_get_video_rotate_degrees(ffp));
 #endif
@@ -1914,7 +1913,7 @@ static int ffplay_video_thread(void *arg)
             goto the_end;
         if (!ret)
             continue;
-
+        //av_log(NULL,AV_LOG_DEBUG,"[wml] ffplay_video_thread get_video_frame last_serial=%d pkt_serial=%d stream_index=%d.\n",last_serial,is->viddec.pkt_serial,is->viddec.pkt.stream_index);
 #if CONFIG_AVFILTER
         if (   last_w != frame->width
             || last_h != frame->height
@@ -1925,7 +1924,7 @@ static int ffplay_video_thread(void *arg)
             SDL_LockMutex(ffp->vf_mutex);
             ffp->vf_changed = 0;
             av_log(NULL, AV_LOG_DEBUG,
-                   "Video frame changed from size:%dx%d format:%s serial:%d to size:%dx%d format:%s serial:%d\n",
+                   "[wml] Video frame changed from size:%dx%d format:%s serial:%d to size:%dx%d format:%s serial:%d\n",
                    last_w, last_h,
                    (const char *)av_x_if_null(av_get_pix_fmt_name(last_format), "none"), last_serial,
                    frame->width, frame->height,
@@ -1984,6 +1983,8 @@ static int ffplay_video_thread(void *arg)
     avfilter_graph_free(&graph);
 #endif
     av_frame_free(&frame);
+    av_log(NULL,AV_LOG_DEBUG,"[wml] ffplay_video_thread out\n");
+
     return 0;
 }
 
@@ -2956,6 +2957,17 @@ static int read_thread(void *arg)
             continue;
         }
 #endif
+         /* offset change*/
+        if(is->offset_req)
+        {
+            //:TODO offset change wml
+            int offset_pos = is->offset_pos;
+            int offset_rel = is->offset_rel;
+            av_log(NULL, AV_LOG_DEBUG, "[wml] offset_req offset_pos=%d, new offset=%d, old offset=%d.\n",is->offset_pos, is->offset_rel, ic->offset);
+            ic->offset = is->offset_pos;
+
+            is->offset_req = 0;
+        }
         if (is->seek_req) {
             int64_t seek_target = is->seek_pos;
             int64_t seek_min    = is->seek_rel > 0 ? seek_target - is->seek_rel + 2: INT64_MIN;
@@ -3029,15 +3041,6 @@ static int read_thread(void *arg)
             ffp_notify_msg3(ffp, FFP_MSG_SEEK_COMPLETE, (int)fftime_to_milliseconds(seek_target), ret);
             ffp_toggle_buffering(ffp, 1);
         }
-        /* offset change*/
-        if(is->offset_req)
-        {   
-            //:TODO offset change wml
-            is->offset_req = 0;
-            int offset_pos = is->offset_pos;
-            int offset_rel = is->offset_rel;
-            av_log(NULL, AV_LOG_DEBUG, "[wml] offset_req offset_pos[%d], offset_rel[%d] \n",is->offset_pos, is->offset_rel);
-        }
         if (is->queue_attachments_req) {
             if (is->video_st && (is->video_st->disposition & AV_DISPOSITION_ATTACHED_PIC)) {
                 AVPacket copy;
@@ -3105,7 +3108,9 @@ static int read_thread(void *arg)
             }
         }
         pkt->flags = 0;
+        //av_log(NULL, AV_LOG_DEBUG, "[wml] read_thread av_read_frame before filename=%s duration=%d.\n", ic->filename,ic->duration);
         ret = av_read_frame(ic, pkt);
+        //av_log(NULL, AV_LOG_DEBUG, "[wml] read_thread av_read_frame after %d.\n", ret);
         if (ret < 0) {
             int pb_eof = 0;
             int pb_error = 0;
@@ -3162,7 +3167,7 @@ static int read_thread(void *arg)
         } else {
             is->eof = 0;
         }
-
+        /*put the packet into video/audio/subtitle queue */
         if (pkt->flags & AV_PKT_FLAG_DISCONTINUITY) {
             if (is->audio_stream >= 0) {
                 packet_queue_put(&is->audioq, &flush_pkt);
@@ -3225,6 +3230,7 @@ static VideoState *stream_open(FFPlayer *ffp, const char *filename, AVInputForma
     assert(!ffp->is);
     VideoState *is;
 
+    av_log(NULL, AV_LOG_DEBUG, "[wml] stream_open in.\n");
     is = av_mallocz(sizeof(VideoState));
     if (!is)
         return NULL;
@@ -3283,6 +3289,7 @@ static VideoState *stream_open(FFPlayer *ffp, const char *filename, AVInputForma
     is->video_refresh_tid = SDL_CreateThreadEx(&is->_video_refresh_tid, video_refresh_thread, ffp, "ff_vout");
     if (!is->video_refresh_tid) {
         av_freep(&ffp->is);
+        av_log(NULL, AV_LOG_DEBUG, "[wml] stream_open out 0.\n");
         return NULL;
     }
 
@@ -3294,8 +3301,10 @@ fail:
         if (is->video_refresh_tid)
             SDL_WaitThread(is->video_refresh_tid, NULL);
         stream_close(ffp);
+        av_log(NULL, AV_LOG_DEBUG, "[wml] stream_open out 1.\n");
         return NULL;
     }
+    av_log(NULL, AV_LOG_DEBUG, "[wml] stream_open out 2.\n");
     return is;
 }
 
