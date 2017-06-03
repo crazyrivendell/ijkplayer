@@ -142,6 +142,8 @@ typedef struct MyAVPacketList {
     AVPacket pkt;
     struct MyAVPacketList *next;
     int serial;
+
+    int offset; /*[wml] identify which fov is belong to*/
 } MyAVPacketList;
 
 typedef struct PacketQueue {

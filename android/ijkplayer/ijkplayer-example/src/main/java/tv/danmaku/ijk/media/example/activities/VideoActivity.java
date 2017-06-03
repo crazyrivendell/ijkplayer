@@ -66,7 +66,7 @@ public class VideoActivity extends AppCompatActivity implements TracksFragment.I
 
     private Settings mSettings;
     private boolean mBackPressed;
-    private int mOffset = 0;
+    private int mOffset = 1;
 
     public static Intent newIntent(Context context, String videoPath, String videoTitle) {
         Intent intent = new Intent(context, VideoActivity.class);
