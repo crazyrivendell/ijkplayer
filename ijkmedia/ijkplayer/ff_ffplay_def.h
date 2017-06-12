@@ -153,8 +153,6 @@ typedef struct PacketQueue {
     int64_t duration;
     int abort_request;
     int serial;
-
-    int offset; /*[wml] identify which fov is belong to*/
     
     SDL_mutex *mutex;
     SDL_cond *cond;

@@ -1875,6 +1875,9 @@ static int ffplay_video_thread(void *arg)
     double pts;
     double duration;
     int ret;
+
+    int last_offset = 0;
+    
     AVRational tb = is->video_st->time_base;
     AVRational frame_rate = av_guess_frame_rate(is->ic, is->video_st, NULL);
     av_log(NULL,AV_LOG_DEBUG,"[wml] ffplay_video_thread in.\n");
@@ -1886,6 +1889,7 @@ static int ffplay_video_thread(void *arg)
     enum AVPixelFormat last_format = -2;
     int last_serial = -1;
     int last_vfilter_idx = 0;
+    
     if (!graph) {
         av_frame_free(&frame);
         return AVERROR(ENOMEM);
@@ -1907,7 +1911,12 @@ static int ffplay_video_thread(void *arg)
             goto the_end;
         if (!ret)
             continue;
-        //av_log(NULL,AV_LOG_DEBUG,"[wml] ffplay_video_thread get_video_frame last_serial=%d pkt_serial=%d stream_index=%d.\n",last_serial,is->viddec.pkt_serial,is->viddec.pkt.stream_index);
+        
+        /*wml catch offset change*/
+        if(last_offset != frame->pkt_offset){
+            av_log(NULL,AV_LOG_DEBUG, "[wml] ffplay_video_thread offset change to fov %d \n", frame->pkt_offset);
+            last_offset = frame->pkt_offset;
+        }
 #if CONFIG_AVFILTER
         if (   last_w != frame->width
             || last_h != frame->height
@@ -1918,7 +1927,7 @@ static int ffplay_video_thread(void *arg)
             SDL_LockMutex(ffp->vf_mutex);
             ffp->vf_changed = 0;
             av_log(NULL, AV_LOG_DEBUG,
-                   "[wml] Video frame changed from size:%dx%d format:%s serial:%d to size:%dx%d format:%s serial:%d\n",
+                   "Video frame changed from size:%dx%d format:%s serial:%d to size:%dx%d format:%s serial:%d\n",
                    last_w, last_h,
                    (const char *)av_x_if_null(av_get_pix_fmt_name(last_format), "none"), last_serial,
                    frame->width, frame->height,
@@ -2560,7 +2569,7 @@ static int stream_component_open(FFPlayer *ffp, int stream_index)
 
         is->audio_stream = stream_index;
         is->audio_st = ic->streams[stream_index];
-
+        av_log(NULL, AV_LOG_DEBUG, "[wml] audio_stream=%d %x.\n",is->audio_stream,is->audio_st);
         decoder_init(&is->auddec, avctx, &is->audioq, is->continue_read_thread);
         if ((is->ic->iformat->flags & (AVFMT_NOBINSEARCH | AVFMT_NOGENSEARCH | AVFMT_NO_BYTE_SEEK)) && !is->ic->iformat->read_seek) {
             is->auddec.start_pts = is->audio_st->start_time;
@@ -2573,7 +2582,7 @@ static int stream_component_open(FFPlayer *ffp, int stream_index)
     case AVMEDIA_TYPE_VIDEO:
         is->video_stream = stream_index;
         is->video_st = ic->streams[stream_index];
-
+        av_log(NULL, AV_LOG_DEBUG, "[wml] video_stream=%d %x.\n",is->video_stream,is->video_st);
         decoder_init(&is->viddec, avctx, &is->videoq, is->continue_read_thread);
         ffp->node_vdec = ffpipeline_open_video_decoder(ffp->pipeline, ffp);
         if (!ffp->node_vdec)
@@ -2616,7 +2625,7 @@ static int stream_component_open(FFPlayer *ffp, int stream_index)
 
         is->subtitle_stream = stream_index;
         is->subtitle_st = ic->streams[stream_index];
-
+        av_log(NULL, AV_LOG_DEBUG, "[wml] subtitle_stream=%d %x.\n",is->subtitle_stream,is->subtitle_st);
         ffp_set_subtitle_codec_info(ffp, AVCODEC_MODULE_NAME, avcodec_get_name(avctx->codec_id));
 
         decoder_init(&is->subdec, avctx, &is->subtitleq, is->continue_read_thread);
@@ -2690,7 +2699,7 @@ static int read_thread(void *arg)
     int64_t prev_io_tick_counter = 0;
     int64_t io_tick_counter = 0;
 
-    av_log(NULL, AV_LOG_DEBUG, "[wml] read_thread in.\n");
+    av_log(NULL, AV_LOG_DEBUG, "[wml] read_thread in %x.\n",ffp->is);
     if (!wait_mutex) {
         av_log(NULL, AV_LOG_FATAL, "SDL_CreateMutex(): %s\n", SDL_GetError());
         ret = AVERROR(ENOMEM);
@@ -2709,7 +2718,7 @@ static int read_thread(void *arg)
         ret = AVERROR(ENOMEM);
         goto fail;
     }
-    av_log(NULL, AV_LOG_DEBUG, "[wml] read_thread avformat_alloc_context.\n");
+    av_log(NULL, AV_LOG_DEBUG, "[wml] read_thread avformat_alloc_context=%x.\n",ic);
     ic->interrupt_callback.callback = decode_interrupt_cb;
     ic->interrupt_callback.opaque = is;
     if (!av_dict_get(ffp->format_opts, "scan_all_pmts", NULL, AV_DICT_MATCH_CASE)) {
@@ -2731,7 +2740,7 @@ static int read_thread(void *arg)
         ret = -1;
         goto fail;
     }
-    av_log(NULL, AV_LOG_DEBUG, "[wml] read_thread avformat_open_input.\n");
+    av_log(NULL, AV_LOG_DEBUG, "[wml] read_thread avformat_open_input end.\n");
     if (scan_all_pmts_set)
         av_dict_set(&ffp->format_opts, "scan_all_pmts", NULL, AV_DICT_MATCH_CASE);
 
@@ -2807,7 +2816,7 @@ static int read_thread(void *arg)
         AVStream *st = ic->streams[i];
         enum AVMediaType type = st->codecpar->codec_type;
         st->discard = AVDISCARD_ALL;
-        av_log(ffp, AV_LOG_DEBUG, "[wml] read_thread stream[%d], discard: %d\n", i, st->discard);
+        av_log(ffp, AV_LOG_DEBUG, "[wml] read_thread stream[%d], %x  discard: %d\n", i,st, st->discard);
         if (type >= 0 && ffp->wanted_stream_spec[type] && st_index[type] == -1)
             if (avformat_match_stream_specifier(ic, st, ffp->wanted_stream_spec[type]) > 0)
                 st_index[type] = i;
@@ -3106,9 +3115,7 @@ static int read_thread(void *arg)
             }
         }
         pkt->flags = 0;
-        //av_log(NULL, AV_LOG_DEBUG, "[wml] read_thread av_read_frame before filename=%s duration=%d.\n", ic->filename,ic->duration);
         ret = av_read_frame(ic, pkt);
-        //av_log(NULL, AV_LOG_DEBUG, "[wml] read_thread av_read_frame after %d.\n", ret);
         if (ret < 0) {
             int pb_eof = 0;
             int pb_error = 0;
@@ -3166,6 +3173,13 @@ static int read_thread(void *arg)
             is->eof = 0;
         }
         /*put the packet into video/audio/subtitle queue */
+        #if 0
+        if(!ic->offset_req)
+        {
+            flush_pkt.offset = ic->offset; /* wml */
+            av_log(NULL,AV_LOG_DEBUG,"[wml] read_thread offset = %d.\n",flush_pkt.offset);
+        }
+        #endif
         if (pkt->flags & AV_PKT_FLAG_DISCONTINUITY) {
             if (is->audio_stream >= 0) {
                 packet_queue_put(&is->audioq, &flush_pkt);
@@ -3287,7 +3301,6 @@ static VideoState *stream_open(FFPlayer *ffp, const char *filename, AVInputForma
     is->video_refresh_tid = SDL_CreateThreadEx(&is->_video_refresh_tid, video_refresh_thread, ffp, "ff_vout");
     if (!is->video_refresh_tid) {
         av_freep(&ffp->is);
-        av_log(NULL, AV_LOG_DEBUG, "[wml] stream_open out 0.\n");
         return NULL;
     }
 
@@ -3299,10 +3312,9 @@ fail:
         if (is->video_refresh_tid)
             SDL_WaitThread(is->video_refresh_tid, NULL);
         stream_close(ffp);
-        av_log(NULL, AV_LOG_DEBUG, "[wml] stream_open out 1.\n");
         return NULL;
     }
-    av_log(NULL, AV_LOG_DEBUG, "[wml] stream_open out 2.\n");
+    av_log(NULL, AV_LOG_DEBUG, "[wml] stream_open out.\n");
     return is;
 }
 
