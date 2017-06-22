@@ -69,6 +69,8 @@ public class SampleMediaListFragment extends Fragment {
         });
         mAdapter.addItem("rtmp://192.168.50.26:1935/live/demo1","dynamic rtmp streaming1");
         mAdapter.addItem("rtmp://192.168.50.26:1935/live/demo2","dynamic rtmp streaming2");
+        mAdapter.addItem("rtmp://live2.evideocloud.net/live/kandaovr001","dynamic rtmp streaming3");
+        mAdapter.addItem("rtmp://live2.evideocloud.net/live/kandaovr002","dynamic rtmp streaming4");
         mAdapter.addItem("http://v1.kandaovr.com/H265/8M/technic_360x180_cube_lr.m3u8","test");
         mAdapter.addItem("http://192.168.50.26/nyts_6k/nyts_6k_mono360.m3u8", "test-1 hls streaming");
         mAdapter.addItem("rtmp://live.hkstv.hk.lxdns.com/live/hks", "test rtmp streaming");
