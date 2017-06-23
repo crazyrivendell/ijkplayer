@@ -432,7 +432,10 @@ static int decoder_decode_frame(FFPlayer *ffp, Decoder *d, AVFrame *frame, AVSub
             default:
                 break;
         }
-
+        #if DYNAMIC_STREAM
+        /*wml: set frame offset after decode(soft)*/
+        frame->pkt_offset =  d->pkt_temp.offset;
+        #endif
         if (ret < 0) {
             d->packet_pending = 0;
         } else {
@@ -705,6 +708,14 @@ static void video_image_display2(FFPlayer *ffp)
                 }
             }
         }
+        #if DYNAMIC_STREAM
+        /*wml: catch offset change when display frame(video) */
+        if( vp->offset != is->offset_rel){
+            is->offset_rel = vp->offset;
+            av_log(NULL,AV_LOG_DEBUG,"[wml] video_image_display2 offset=%d,pts=%lf.\n",vp->offset, vp->pts);
+        }
+        
+        #endif
         SDL_VoutDisplayYUVOverlay(ffp->vout, vp->bmp);
         ffp->stat.vfps = SDL_SpeedSamplerAdd(&ffp->vfps_sampler, FFP_SHOW_VFPS_FFPLAY, "vfps[ffplay]");
         if (!ffp->first_video_frame_rendered) {
@@ -1382,6 +1393,10 @@ static int queue_picture(FFPlayer *ffp, AVFrame *src_frame, double pts, double d
         if (is->videoq.abort_request)
             return -1;
     }
+    #if DYNAMIC_STREAM
+    /*wml: set Frame offset before push to FrameQueue*/
+    vp->offset = src_frame->pkt_offset;
+    #endif
 
     /* if the frame is not skipped, then display it */
     if (vp->bmp) {
@@ -1911,12 +1926,14 @@ static int ffplay_video_thread(void *arg)
             goto the_end;
         if (!ret)
             continue;
-        
-        /*wml catch offset change*/
+
+        #if DYNAMIC_STREAM
+        /*wml catch offset change when decode(soft) pkts*/
         if(last_offset != frame->pkt_offset){
-            av_log(NULL,AV_LOG_DEBUG, "[wml] ffplay_video_thread offset change to fov %d \n", frame->pkt_offset);
+            av_log(NULL,AV_LOG_DEBUG, "[wml] ffplay_video_thread catch offset change to fov %d \n", frame->pkt_offset);
             last_offset = frame->pkt_offset;
         }
+        #endif
 #if CONFIG_AVFILTER
         if (   last_w != frame->width
             || last_h != frame->height
@@ -2960,6 +2977,7 @@ static int read_thread(void *arg)
             continue;
         }
 #endif
+        #if DYNAMIC_STREAM
          /* offset change*/
         if(is->offset_req)
         {
@@ -2975,6 +2993,7 @@ static int read_thread(void *arg)
             }
             is->offset_req = 0;
         }
+        #endif
         if (is->seek_req) {
             int64_t seek_target = is->seek_pos;
             int64_t seek_min    = is->seek_rel > 0 ? seek_target - is->seek_rel + 2: INT64_MIN;

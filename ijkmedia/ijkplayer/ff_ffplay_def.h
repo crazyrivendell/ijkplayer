@@ -276,6 +276,7 @@ typedef struct VideoState {
     /*offset  [wml]*/
     int offset_req;   /*offset requset*/
     int offset_pos; /* offset fov*/
+    int offset_rel;  /*current fov frames*/
 
 #ifdef FFP_MERGE
     int read_pause_return;
