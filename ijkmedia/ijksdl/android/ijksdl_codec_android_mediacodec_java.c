@@ -261,7 +261,7 @@ ssize_t SDL_AMediaCodecJava_dequeueInputBuffer(SDL_AMediaCodec* acodec, int64_t 
 
 sdl_amedia_status_t SDL_AMediaCodecJava_queueInputBuffer(SDL_AMediaCodec* acodec, size_t idx, off_t offset, size_t size, uint64_t time, uint32_t flags)
 {
-    AMCTRACE("%s: %d", __func__, (int)idx);
+    ALOGD("[wml]] %s: %d", __func__, (int)idx);
 
     JNIEnv *env = NULL;
     if (JNI_OK != SDL_JNI_SetupThreadEnv(&env)) {

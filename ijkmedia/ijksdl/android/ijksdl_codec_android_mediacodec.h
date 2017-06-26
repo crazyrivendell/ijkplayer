@@ -39,6 +39,8 @@ typedef struct SDL_AMediaCodecBufferInfo {
     int32_t size;
     int64_t presentationTimeUs;
     uint32_t flags;
+
+    int pkt_offset; /* wml */
 } SDL_AMediaCodecBufferInfo;
 
 typedef struct SDL_AMediaFormat             SDL_AMediaFormat;
@@ -123,7 +125,7 @@ ssize_t                 SDL_AMediaCodec_writeInputData(SDL_AMediaCodec* acodec, 
 
 ssize_t                 SDL_AMediaCodec_dequeueInputBuffer(SDL_AMediaCodec* acodec, int64_t timeoutUs);
 sdl_amedia_status_t     SDL_AMediaCodec_queueInputBuffer(SDL_AMediaCodec* acodec, size_t idx, off_t offset, size_t size, uint64_t time, uint32_t flags);
-
+sdl_amedia_status_t     SDL_AMediaCodec_queueInputBuffer2(SDL_AMediaCodec* acodec, size_t idx, off_t offset, size_t size, uint64_t time, uint32_t flags, int pkt_offset);
 ssize_t                 SDL_AMediaCodec_dequeueOutputBuffer(SDL_AMediaCodec* acodec, SDL_AMediaCodecBufferInfo *info, int64_t timeoutUs);
 SDL_AMediaFormat*       SDL_AMediaCodec_getOutputFormat(SDL_AMediaCodec* acodec);
 sdl_amedia_status_t     SDL_AMediaCodec_releaseOutputBuffer(SDL_AMediaCodec* acodec, size_t idx, bool render);

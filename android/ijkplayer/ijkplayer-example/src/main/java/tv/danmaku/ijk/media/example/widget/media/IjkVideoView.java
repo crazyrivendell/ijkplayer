@@ -1048,8 +1048,8 @@ public class IjkVideoView extends FrameLayout implements MediaController.MediaPl
                     ijkMediaPlayer.setOption(1, "analyzemaxduration", 100L);
                     ijkMediaPlayer.setOption(1, "probesize", 10240L);
 
-                    if (mSettings.getUsingMediaCodec()) { //soft decode--use avcodec(ffmpeg)
-                    //if (true) {  //hard decode--use mediacodec(android)
+                    //ifmSettings.getUsingMediaCodec()) { //soft decode--use avcodec(ffmpeg)
+                    if (true) {  //hard decode--use mediacodec(android)
                         ijkMediaPlayer.setOption(IjkMediaPlayer.OPT_CATEGORY_PLAYER, "mediacodec", 1);
                         if (mSettings.getUsingMediaCodecAutoRotate()) {
                             ijkMediaPlayer.setOption(IjkMediaPlayer.OPT_CATEGORY_PLAYER, "mediacodec-auto-rotate", 1);

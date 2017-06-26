@@ -52,6 +52,8 @@ typedef struct AMC_Buf_Out {
     int acodec_serial;
     SDL_AMediaCodecBufferInfo info;
     double pts;
+
+    int pkt_offset; /*wml offset of pkt feed to harddecode buffer*/
 } AMC_Buf_Out;
 
 typedef struct IJKFF_Pipenode_Opaque {
@@ -371,6 +373,11 @@ static int amc_fill_frame(
     frame->pts    = av_rescale_q(buffer_info->presentationTimeUs, AV_TIME_BASE_Q, is->video_st->time_base);
     if (frame->pts < 0)
         frame->pts = AV_NOPTS_VALUE;
+
+    #if DYNAMIC_STREAM
+    frame->pkt_offset = buffer_info->pkt_offset;  /* wml set frame offet */
+    ALOGD("[wml] %s: pts=%f offset=%d", __func__, (float)frame->pts,frame->pkt_offset);
+    #endif
     // ALOGE("%s: %f", __func__, (float)frame->pts);
 
     *got_frame = 1;
@@ -394,6 +401,10 @@ static int feed_input_buffer(JNIEnv *env, IJKFF_Pipenode *node, int64_t timeUs, 
     ssize_t  copy_size          = 0;
     int64_t  time_stamp         = 0;
     uint32_t queue_flags        = 0;
+
+    #if DYNAMIC_STREAM
+    int pkt_offset = 0;
+    #endif
 
     if (enqueue_count)
         *enqueue_count = 0;
@@ -448,6 +459,7 @@ static int feed_input_buffer(JNIEnv *env, IJKFF_Pipenode *node, int64_t timeUs, 
             uint8_t  *size_data      = NULL;
             int       size_data_size = 0;
             AVPacket *avpkt          = &d->pkt_temp;
+            
             size_data = av_packet_get_side_data(avpkt, AV_PKT_DATA_NEW_EXTRADATA, &size_data_size);
             // minimum avcC(sps,pps) = 7
             if (size_data && size_data_size >= 7) {
@@ -663,14 +675,22 @@ static int feed_input_buffer(JNIEnv *env, IJKFF_Pipenode *node, int64_t timeUs, 
         } else {
             time_stamp = 0;
         }
-        // ALOGE("queueInputBuffer, %lld\n", time_stamp);
+        #if DYNAMIC_STREAM
+        pkt_offset = d->pkt_temp.offset;
+    
+        ALOGD("[wml] %s: %lld  %d,offset=%d.\n", __func__, time_stamp, input_buffer_index, pkt_offset);
+        amc_ret = SDL_AMediaCodec_queueInputBuffer2(opaque->acodec, input_buffer_index, 0, copy_size, time_stamp, queue_flags, pkt_offset);
+        #else
+    
+        ALOGD("%s: %lld  %d\n", __func__, time_stamp, input_buffer_index);
         amc_ret = SDL_AMediaCodec_queueInputBuffer(opaque->acodec, input_buffer_index, 0, copy_size, time_stamp, queue_flags);
+        #endif
         if (amc_ret != SDL_AMEDIA_OK) {
             ALOGE("%s: SDL_AMediaCodec_getInputBuffer failed\n", __func__);
             ret = -1;
             goto fail;
         }
-        // ALOGE("%s: queue %d/%d", __func__, (int)copy_size, (int)input_buffer_size);
+        //ALOGE("[wml] %s: queue %d/%d", __func__, (int)copy_size, (int)input_buffer_size);
         opaque->input_packet_count++;
         if (enqueue_count)
             ++*enqueue_count;

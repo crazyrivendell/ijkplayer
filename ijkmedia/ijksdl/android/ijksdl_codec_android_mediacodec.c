@@ -178,6 +178,16 @@ sdl_amedia_status_t SDL_AMediaCodec_queueInputBuffer(SDL_AMediaCodec* acodec, si
     return acodec->func_queueInputBuffer(acodec, idx, offset, size, time, flags);
 }
 
+sdl_amedia_status_t SDL_AMediaCodec_queueInputBuffer2(SDL_AMediaCodec* acodec, size_t idx, off_t offset, size_t size, uint64_t time, uint32_t flags,int pkt_offset)
+{
+    assert(acodec->func_queueInputBuffer);
+    if (flags & AMEDIACODEC__BUFFER_FLAG_FAKE_FRAME) {
+        return SDL_AMediaCodec_FakeFifo_queueInputBuffer2(&acodec->common->fake_fifo, idx, offset, size, time, flags, pkt_offset);
+    }
+    //TODO func_queueInputBuffer should modify for DYNAMIC_STREAM
+    return acodec->func_queueInputBuffer(acodec, idx, offset, size, time, flags);
+}
+
 ssize_t SDL_AMediaCodec_dequeueOutputBuffer(SDL_AMediaCodec* acodec, SDL_AMediaCodecBufferInfo *info, int64_t timeoutUs)
 {
     assert(acodec->func_dequeueOutputBuffer);

@@ -708,14 +708,15 @@ static void video_image_display2(FFPlayer *ffp)
                 }
             }
         }
+        
         #if DYNAMIC_STREAM
         /*wml: catch offset change when display frame(video) */
         if( vp->offset != is->offset_rel){
             is->offset_rel = vp->offset;
             av_log(NULL,AV_LOG_DEBUG,"[wml] video_image_display2 offset=%d,pts=%lf.\n",vp->offset, vp->pts);
         }
-        
         #endif
+        
         SDL_VoutDisplayYUVOverlay(ffp->vout, vp->bmp);
         ffp->stat.vfps = SDL_SpeedSamplerAdd(&ffp->vfps_sampler, FFP_SHOW_VFPS_FFPLAY, "vfps[ffplay]");
         if (!ffp->first_video_frame_rendered) {
@@ -1393,6 +1394,7 @@ static int queue_picture(FFPlayer *ffp, AVFrame *src_frame, double pts, double d
         if (is->videoq.abort_request)
             return -1;
     }
+    
     #if DYNAMIC_STREAM
     /*wml: set Frame offset before push to FrameQueue*/
     vp->offset = src_frame->pkt_offset;
@@ -1927,13 +1929,6 @@ static int ffplay_video_thread(void *arg)
         if (!ret)
             continue;
 
-        #if DYNAMIC_STREAM
-        /*wml catch offset change when decode(soft) pkts*/
-        if(last_offset != frame->pkt_offset){
-            av_log(NULL,AV_LOG_DEBUG, "[wml] ffplay_video_thread catch offset change to fov %d \n", frame->pkt_offset);
-            last_offset = frame->pkt_offset;
-        }
-        #endif
 #if CONFIG_AVFILTER
         if (   last_w != frame->width
             || last_h != frame->height
@@ -1989,6 +1984,15 @@ static int ffplay_video_thread(void *arg)
 #endif
             duration = (frame_rate.num && frame_rate.den ? av_q2d((AVRational){frame_rate.den, frame_rate.num}) : 0);
             pts = (frame->pts == AV_NOPTS_VALUE) ? NAN : frame->pts * av_q2d(tb);
+            
+            #if DYNAMIC_STREAM
+            /*wml: catch offset change when decode(soft) pkts*/
+            if(last_offset != frame->pkt_offset){
+                av_log(NULL,AV_LOG_DEBUG, "[wml] ffplay_video_thread catch offset change to fov %d \n", frame->pkt_offset);
+                last_offset = frame->pkt_offset;
+            }
+            #endif
+            
             ret = queue_picture(ffp, frame, pts, duration, av_frame_get_pkt_pos(frame), is->viddec.pkt_serial);
             av_frame_unref(frame);
 #if CONFIG_AVFILTER

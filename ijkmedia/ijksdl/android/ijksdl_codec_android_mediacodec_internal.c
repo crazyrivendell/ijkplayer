@@ -25,8 +25,8 @@
 #include "ijksdl/ijksdl_timer.h"
 #include "ijksdl_codec_android_mediadef.h"
 
-#define FAK_TRACE(...)
-//#define FAK_TRACE ALOGE
+//#define FAK_TRACE(...)
+#define FAK_TRACE ALOGE
 
 sdl_amedia_status_t SDL_AMediaCodec_FakeFifo_init(SDL_AMediaCodec_FakeFifo *fifo)
 {
@@ -105,7 +105,7 @@ sdl_amedia_status_t SDL_AMediaCodec_FakeFifo_queueInputBuffer(SDL_AMediaCodec_Fa
     fake->info.flags  = flags;
     fake->index       = fifo->end;
 
-    FAK_TRACE("%s, %d, %lld", __func__, fifo->end, time);
+    ALOGD("%s, %d, %lld", __func__, fifo->end, time);
 
     fifo->end = (fifo->end + 1) % FAKE_BUFFER_QUEUE_SIZE;
     fifo->size++;
@@ -114,6 +114,37 @@ sdl_amedia_status_t SDL_AMediaCodec_FakeFifo_queueInputBuffer(SDL_AMediaCodec_Fa
 
     return SDL_AMEDIA_OK;
 }
+
+sdl_amedia_status_t SDL_AMediaCodec_FakeFifo_queueInputBuffer2(SDL_AMediaCodec_FakeFifo *fifo, size_t idx, off_t offset, size_t size, uint64_t time, uint32_t flags, int pkt_offset)
+{
+    if (fifo->should_abort)
+        return SDL_AMEDIA_ERROR_UNKNOWN;
+
+    SDL_LockMutex(fifo->mutex);
+    if (fifo->size >= FAKE_BUFFER_QUEUE_SIZE) {
+        SDL_UnlockMutex(fifo->mutex);
+        return SDL_AMEDIA_ERROR_UNKNOWN;
+    }
+
+    SDL_AMediaCodec_FakeFrame *fake = &fifo->fakes[fifo->end];
+    fake->info.offset = offset;
+    fake->info.size   = size;
+    fake->info.presentationTimeUs = time;
+    fake->info.flags  = flags;
+    fake->index       = fifo->end;
+    
+    fake->info.pkt_offset = pkt_offset;
+
+    ALOGD("%s, %d, %lld %d", __func__, fifo->end, time,fake->info.pkt_offset);
+
+    fifo->end = (fifo->end + 1) % FAKE_BUFFER_QUEUE_SIZE;
+    fifo->size++;
+    SDL_CondSignal(fifo->wakeup_dequeue_cond);
+    SDL_UnlockMutex(fifo->mutex);
+
+    return SDL_AMEDIA_OK;
+}
+
 
 ssize_t SDL_AMediaCodec_FakeFifo_dequeueOutputBuffer(SDL_AMediaCodec_FakeFifo *fifo, SDL_AMediaCodecBufferInfo *info, int64_t timeoutUs)
 {
@@ -133,7 +164,7 @@ ssize_t SDL_AMediaCodec_FakeFifo_dequeueOutputBuffer(SDL_AMediaCodec_FakeFifo *f
             info->flags |= AMEDIACODEC__BUFFER_FLAG_FAKE_FRAME;
             dequeue_ret  = fake->index;
 
-            FAK_TRACE("%s, [%d]%lld", __func__, fifo->begin, info->presentationTimeUs);
+            ALOGD("%s, [%d]%lld", __func__, fifo->begin, info->presentationTimeUs);
 
             fifo->begin = (fifo->begin + 1) % FAKE_BUFFER_QUEUE_SIZE;
             fifo->size--;
